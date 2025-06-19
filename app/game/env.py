@@ -5,7 +5,7 @@ import numpy as np
 from app.game.vos import TileMergingAction
 
 
-class TileMergingEnvClient:
+class TileMergingEnv:
     """
     Environment for a 2048-style tile merging game on an N x N grid.
 
