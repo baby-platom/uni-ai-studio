@@ -1,199 +1,174 @@
 import sys
+from collections.abc import Mapping
+from types import MappingProxyType
 
 import pygame
 
-from app.game.env import TileMergingEnv
-from app.game.vos import TileMergingAction
+from app.game.env import FrozenLLakeEnv
+from app.game.vos import Action
 
 
-# ruff: noqa: FBT003
-class TileMergingGUI:
-    """GUI for a 2048-style tile merging game with obstacles."""
+class FrozenLLakeGUI:
+    """Pygame GUI for the L-shaped Frozen Lake environment."""
 
-    GAME_NAME = "2048 with Obstacles"
-    default_tile_color = (60, 58, 50)
+    CELL_SIZE: int = 40
+    MARGIN: int = 2
+    FONT_SIZE: int = 24
+    FPS: int = 10
+    WINDOW_TITLE: str = "L-Shaped Frozen Lake"
 
-    def __init__(
-        self,
-        size: int = 4,
-        cell_size: int = 100,
-        margin: int = 5,
-        fps: int = 60,
-    ) -> None:
-        """Initialize pygame, window, environment, fonts, and colors.
+    QUIT_KEY: int = pygame.K_q
+    RESTART_KEY: int = pygame.K_r
 
-        Args:
-            size: The size of the grid.
-            cell_size: The size of each cell in pixels.
-            margin: The margin between cells in pixels.
-            fps: The number of frames per second.
-        """
+    # Colors
+    BG_COLOR: tuple[int, int, int] = (30, 30, 30)
+    GRID_COLOR: tuple[int, int, int] = (200, 200, 200)
+    AGENT_COLOR: tuple[int, int, int] = (0, 0, 255)
+    HOLE_COLOR: tuple[int, int, int] = (50, 50, 50)
+    GOAL_COLOR: tuple[int, int, int] = (0, 200, 0)
+    TEXT_COLOR: tuple[int, int, int] = (255, 255, 255)
 
-        self.size = size
-        self.cell_size = cell_size
-        self.margin = margin
-        self.fps = fps
+    KEY_ACTION_MAP: Mapping[int, Action] = MappingProxyType(
+        {
+            pygame.K_UP: Action.UP,
+            pygame.K_RIGHT: Action.RIGHT,
+            pygame.K_DOWN: Action.DOWN,
+            pygame.K_LEFT: Action.LEFT,
+        }
+    )
 
-        self.env: TileMergingEnv
+    def __init__(self, env: FrozenLLakeEnv) -> None:
+        self.env: FrozenLLakeEnv = env
 
-        self.__init_pygame()
-        self.__init_env()
-        self.__init_fonts()
-        self.__init_colors()
+        self.score: float = 0.0
+        self.game_over: bool = False
+        self.win: bool = False
 
-        self.state = self.env.reset()
+        self._init_pygame()
+        self._init_display()
+        self._init_font()
 
-    def __init_pygame(self) -> None:
-        """Initialize pygame display and clock."""
+    def _init_pygame(self) -> None:
         pygame.init()
-
-        self.grid_px = self.size * self.cell_size + (self.size + 1) * self.margin
-        self.score_bar_px = 50
-        self.screen_size = (
-            self.grid_px,
-            self.grid_px + self.score_bar_px,
-        )
-
-        self.screen = pygame.display.set_mode(self.screen_size)
-        pygame.display.set_caption(self.GAME_NAME)
         self.clock = pygame.time.Clock()
 
-    def __init_env(self) -> None:
-        self.env = TileMergingEnv(size=self.size, obstacle_enabled=True)
+    def _init_display(self) -> None:
+        grid_w = self.env.width * (self.CELL_SIZE + self.MARGIN) + self.MARGIN
+        grid_h = self.env.height * (self.CELL_SIZE + self.MARGIN) + self.MARGIN
+        info_h = self.FONT_SIZE + 2 * self.MARGIN
 
-    def __init_fonts(self) -> None:
-        """Load fonts for rendering text."""
-        self.tile_font = pygame.font.SysFont(None, self.cell_size // 3)
-        self.score_font = pygame.font.SysFont(None, 36)
-        self.info_font = pygame.font.SysFont(None, 24)
+        self.screen = pygame.display.set_mode((grid_w, grid_h + info_h))
+        pygame.display.set_caption(self.WINDOW_TITLE)
 
-    def __init_colors(self) -> None:
-        """Define colors for tiles and obstacles."""
-        self.color_map: dict[int, tuple[int, int, int]] = {
-            0: (205, 193, 180),
-            -1: (119, 110, 101),
-            2: (238, 228, 218),
-            4: (237, 224, 200),
-            8: (242, 177, 121),
-            16: (245, 149, 99),
-            32: (246, 124, 95),
-            64: (246, 94, 59),
-            128: (237, 207, 114),
-            256: (237, 204, 97),
-            512: (237, 200, 80),
-            1024: (237, 197, 63),
-            2048: (237, 194, 46),
-        }
-
-    def _draw(self) -> None:
-        """Draw grid, tiles, score, and controls info."""
-        self.screen.fill((187, 173, 160))
-
-        for row in range(self.size):
-            for col in range(self.size):
-                value = int(self.state[row, col])
-
-                rect = pygame.Rect(
-                    self.margin + col * (self.cell_size + self.margin),
-                    self.margin + row * (self.cell_size + self.margin),
-                    self.cell_size,
-                    self.cell_size,
-                )
-                color = self.color_map.get(value, self.default_tile_color)
-                pygame.draw.rect(self.screen, color, rect, border_radius=8)
-
-                if value > 0:
-                    text = self.tile_font.render(str(value), True, (0, 0, 0))
-                    self.screen.blit(text, text.get_rect(center=rect.center))
-
-        self.__draw_score()
-        self.__draw_controls_info()
-
-        pygame.display.flip()
-
-    def __draw_score(self) -> None:
-        score_surf = self.score_font.render(f"Score: {self.env.score}", True, (0, 0, 0))
-        self.screen.blit(
-            score_surf,
-            (10, self.grid_px + (self.score_bar_px - score_surf.get_height()) // 2),
-        )
-
-    def __draw_controls_info(self) -> None:
-        info_text = "Arrows: Move  |  R: Restart  |  Q: Quit"
-        info_surf = self.info_font.render(info_text, True, (0, 0, 0))
-        info_pos = (
-            self.screen_size[0] - info_surf.get_width() - 10,
-            self.grid_px + (self.score_bar_px - info_surf.get_height()) // 2,
-        )
-        self.screen.blit(info_surf, info_pos)
-
-    def _handle_key(self, key: int) -> bool:
-        """Step through environment."""
-        mapping = {
-            pygame.K_UP: TileMergingAction.UP,
-            pygame.K_DOWN: TileMergingAction.DOWN,
-            pygame.K_LEFT: TileMergingAction.LEFT,
-            pygame.K_RIGHT: TileMergingAction.RIGHT,
-        }
-
-        if key in mapping:
-            self.state, _, done = self.env.step(mapping[key])
-            return done
-        return False
-
-    def _display_game_over(self) -> None:
-        overlay = pygame.Surface(self.screen_size)
-        overlay.set_alpha(200)
-        overlay.fill((255, 255, 255))
-        self.screen.blit(overlay, (0, 0))
-
-        go_font = pygame.font.SysFont(None, 72)
-        go_surf = go_font.render("Game Over", True, (255, 0, 0))
-        self.screen.blit(
-            go_surf,
-            go_surf.get_rect(
-                center=(self.screen_size[0] // 2, self.screen_size[1] // 2 - 30)
-            ),
-        )
-
-        prompt_font = pygame.font.SysFont(None, 36)
-        prompt_surf = prompt_font.render(
-            "Press R to Restart or Q to Quit", True, (0, 0, 0)
-        )
-        self.screen.blit(
-            prompt_surf,
-            prompt_surf.get_rect(
-                center=(self.screen_size[0] // 2, self.screen_size[1] // 2 + 30)
-            ),
-        )
-
-        pygame.display.flip()
+    def _init_font(self) -> None:
+        self.font = pygame.font.Font(None, self.FONT_SIZE)
 
     def run(self) -> None:
-        running = True
-        game_over = False
+        self._reset_game()
 
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+        while True:
+            self._handle_events()
+            self._draw()
+            pygame.display.flip()
+            self.clock.tick(self.FPS)
 
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        running = False
-                    elif event.key == pygame.K_r:
-                        self.state = self.env.reset()
-                        game_over = False
+    def _reset_game(self) -> None:
+        self.env.reset()
+        self.score = 0.0
+        self.game_over = False
+        self.win = False
 
-                    elif not game_over:
-                        game_over = self._handle_key(event.key)
+    def _handle_events(self) -> None:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
-            if game_over:
-                self._display_game_over()
-            else:
-                self._draw()
+            if event.type == pygame.KEYDOWN:
+                if event.key == self.QUIT_KEY:
+                    pygame.quit()
+                    sys.exit()
+                if event.key == self.RESTART_KEY:
+                    self._reset_game()
 
-            self.clock.tick(self.fps)
+                if not self.game_over and event.key in self.KEY_ACTION_MAP:
+                    action = self.KEY_ACTION_MAP[event.key]
 
-        pygame.quit()
-        sys.exit()
+                    _, reward, done = self.env.step(action)
+                    self.score += reward
+                    if done:
+                        self.game_over = True
+                        self.win = reward == self.env.GOAL_REWARD
+
+    def _draw(self) -> None:
+        self.screen.fill(self.BG_COLOR)
+        self._draw_grid()
+        self._draw_info()
+
+        if self.game_over:
+            self._draw_end_screen()
+
+    def _draw_grid(self) -> None:
+        for row in range(self.env.height):
+            for col in range(self.env.width):
+                if not self.env.mask[row, col]:
+                    continue
+
+                x = self.MARGIN + col * (self.CELL_SIZE + self.MARGIN)
+                y = self.MARGIN + row * (self.CELL_SIZE + self.MARGIN)
+                rect = pygame.Rect(x, y, self.CELL_SIZE, self.CELL_SIZE)
+
+                pos = (row, col)
+                if pos == self.env.goal_pos:
+                    color = self.GOAL_COLOR
+                elif pos in self.env.holes:
+                    color = self.HOLE_COLOR
+                else:
+                    color = self.GRID_COLOR
+
+                pygame.draw.rect(self.screen, color, rect)
+
+        agent_row, agent_col = self.env.current_pos
+        x = self.MARGIN + agent_col * (self.CELL_SIZE + self.MARGIN)
+        y = self.MARGIN + agent_row * (self.CELL_SIZE + self.MARGIN)
+
+        rect = pygame.Rect(x, y, self.CELL_SIZE, self.CELL_SIZE)
+        pygame.draw.rect(self.screen, self.AGENT_COLOR, rect)
+
+    # ruff: noqa: FBT003
+    def _draw_info(self) -> None:
+        info_y = self.env.height * (self.CELL_SIZE + self.MARGIN) + self.MARGIN
+        text_lines = [f"Score: {self.score:.2f}", "Press R to restart, Q to quit"]
+
+        for idx, line in enumerate(text_lines):
+            text_surf = self.font.render(line, True, self.TEXT_COLOR)
+            self.screen.blit(
+                text_surf, (self.MARGIN, info_y + idx * (self.FONT_SIZE + self.MARGIN))
+            )
+
+    def _draw_end_screen(self) -> None:
+        overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        self.screen.blit(overlay, (0, 0))
+
+        status = "You Win!" if self.win else "Game Over!"
+        text_lines = [
+            status,
+            f"Final Score: {self.score:.2f}",
+            "Press R to restart, Q to quit",
+        ]
+
+        total_height = (
+            len(text_lines) * self.FONT_SIZE + (len(text_lines) - 1) * self.MARGIN
+        )
+        start_y = (self.screen.get_height() - total_height) / 2
+
+        for idx, line in enumerate(text_lines):
+            text_surf = self.font.render(line, True, self.TEXT_COLOR)
+            text_rect = text_surf.get_rect(
+                center=(
+                    self.screen.get_width() / 2,
+                    start_y + idx * (self.FONT_SIZE + self.MARGIN),
+                )
+            )
+            self.screen.blit(text_surf, text_rect)

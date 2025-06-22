@@ -1,4 +1,7 @@
-from app.game.gui import TileMergingGUI
+from app.game.env import FrozenLLakeEnv
+from app.game.gui import FrozenLLakeGUI
 
 if __name__ == "__main__":
-    TileMergingGUI().run()
+    env = FrozenLLakeEnv()
+    gui = FrozenLLakeGUI(env)
+    gui.run()

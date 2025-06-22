@@ -55,6 +55,8 @@ class FrozenLLakeEnv:
 
         self._build_mask()
         self._init_mappings()
+        self._generate_holes()
+
         self.reset()
 
     def _build_mask(self) -> None:
@@ -139,7 +141,7 @@ class FrozenLLakeEnv:
         row, col = self.current_pos
         new_pos = (row + dr, col + dc)
 
-        if new_pos in self.pos2state and new_pos not in self.holes:
+        if new_pos in self.pos2state:
             self.current_pos = new_pos
 
         if self.current_pos == self.goal_pos:
