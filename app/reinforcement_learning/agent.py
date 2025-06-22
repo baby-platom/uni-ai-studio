@@ -1,46 +1,46 @@
-import random
-
 import numpy as np
 
-from app.game.vos import TileMergingAction
+from app.game.vos import Action
 
 
 class QLearningAgent:
+    ACTION_SPACE = tuple(Action)
+
     def __init__(
         self,
-        action_space: list[TileMergingAction],
         alpha: float,
         gamma: float,
         epsilon: float,
+        seed: int | None = None,
     ) -> None:
-        self.action_space: list[TileMergingAction] = action_space
         self.alpha: float = alpha
         self.gamma: float = gamma
         self.epsilon: float = epsilon
+        self.rng = np.random.RandomState(seed)
 
-        self.q_table: dict[tuple[int, ...], np.ndarray] = {}
+        self.q_table: dict[int, np.ndarray] = {}
 
-    def _get_q_values(self, state: tuple[int, ...]) -> np.ndarray:
+    def _get_q_values(self, state: int) -> np.ndarray:
         """Return Q-values for the given state, initializing to zero if unseen."""
         if state not in self.q_table:
-            self.q_table[state] = np.zeros(len(self.action_space), dtype=float)
+            self.q_table[state] = np.zeros(len(self.ACTION_SPACE), dtype=float)
         return self.q_table[state]
 
-    def choose_action(self, state: tuple[int, ...]) -> TileMergingAction:
-        if random.random() < self.epsilon:
-            return random.choice(self.action_space)  # Explore
+    def choose_action(self, state: int) -> Action:
+        if self.rng.rand() < self.epsilon:
+            return self.rng.choice(self.ACTION_SPACE)  # Explore
 
         q_vals: np.ndarray = self._get_q_values(state)
         best_idx: int = int(np.argmax(q_vals))
-        return self.action_space[best_idx]  # Exploit
+        return self.ACTION_SPACE[best_idx]  # Exploit
 
     # ruff: noqa: FBT001
     def update(
         self,
-        state: tuple[int, ...],
-        action: TileMergingAction,
+        state: int,
+        action: Action,
         reward: float,
-        next_state: tuple[int, ...],
+        next_state: int,
         done: bool,
     ) -> None:
         """Perform the Q-learning update for a single transition."""
