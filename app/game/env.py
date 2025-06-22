@@ -1,192 +1,156 @@
-import random
+from collections import deque
 
 import numpy as np
 
-from app.game.vos import TileMergingAction
+from app.game.vos import Action
 
 
-class TileMergingEnv:
-    """Environment for a 2048-style tile merging game on an N x N grid.
+class FrozenLLakeEnv:
+    """Custom L-shaped Frozen Lake environment with random holes.
 
-    The special feature of the game is a random cell filled with an obstacle.
-    The obstacle is a cell that doesn't move and cannot be merged with other tiles.
-
-    The board uses:
-      - -1 for obstacle cells
-      -  0 for empty cells
-      - >=2 powers of two for tile values
+    Rewards:
+      - Step: -0.1
+      - Goal: +1
+      - Hole: -1
     """
 
-    random_tile_2_prob = 0.9
-    random_tile_4_prob = 1 - random_tile_2_prob
+    GOAL_REWARD = 1.0
+    HOLE_REWARD = -1.0
+    STEP_REWARD = -0.1
+
+    DELTAS: tuple[tuple[int, int]] = ((-1, 0), (0, 1), (1, 0), (0, -1))
+
+    height: int
+    width: int
+    arm_width: int
+    arm_height: int
+    hole_prob: float
+
+    random_state: np.random.RandomState
+    mask: np.ndarray
+    pos2state: dict[tuple[int, int], int]
+    state2pos: dict[int, tuple[int, int]]
+
+    holes: set[tuple[int, int]]
+    start_pos: tuple[int, int]
+    goal_pos: tuple[int, int]
+    current_pos: tuple[int, int]
 
     def __init__(
         self,
-        size: int = 4,
-        *,
-        obstacle_enabled: bool = True,
+        height: int = 10,
+        width: int = 10,
+        arm_width: int = 4,
+        arm_height: int = 4,
+        hole_prob: float = 0.2,
         seed: int | None = None,
     ) -> None:
-        self.size = size
-        self.obstacle_enabled = obstacle_enabled
+        self.height = height
+        self.width = width
+        self.arm_width = arm_width
+        self.arm_height = arm_height
+        self.hole_prob = hole_prob
 
-        self.seed = seed
-        if seed is not None:
-            random.seed(seed)
-            np.random.seed(seed)
+        self.random_state = np.random.RandomState(seed)
 
+        self._build_mask()
+        self._init_mappings()
         self.reset()
 
-    def reset(self) -> np.ndarray:
-        """Reset the board, place an obstacle, add two starting tiles."""
-        self.board = np.zeros((self.size, self.size), dtype=int)
+    def _build_mask(self) -> None:
+        """Construct the boolean mask for the L-shaped map."""
+        m = np.zeros((self.height, self.width), dtype=bool)
+        m[:, : self.arm_width] = True
+        m[self.height - self.arm_height :, :] = True
+        self.mask = m
 
-        if self.obstacle_enabled:
-            empties = [(i, j) for i in range(self.size) for j in range(self.size)]
-            self.obstacle_pos = random.choice(empties)
-            self.board[self.obstacle_pos] = -1
+    def _init_mappings(self) -> None:
+        self.start_pos = (0, 0)
+        self.goal_pos = (self.height - 1, self.width - 1)
 
-        self._add_random_tile()
-        self._add_random_tile()
-        self.score = 0
+        coords = [
+            (row, col)
+            for row in range(self.height)
+            for col in range(self.width)
+            if self.mask[row, col]
+        ]
+        self.pos2state = {pos: idx for idx, pos in enumerate(coords)}
+        self.state2pos = {idx: pos for pos, idx in self.pos2state.items()}
+
+    def _is_reachable(self, holes: set[tuple[int, int]]) -> bool:
+        """Check if goal is reachable from start."""
+        visited: set[tuple[int, int]] = set()
+        queue = deque([self.start_pos])
+        visited.add(self.start_pos)
+
+        while queue:
+            row, col = queue.popleft()
+            if (row, col) == self.goal_pos:
+                return True
+
+            for dr, dc in self.DELTAS:
+                nxt_row, nxt_col = row + dr, col + dc
+                nxt = (nxt_row, nxt_col)
+
+                if (
+                    0 <= nxt_row < self.height
+                    and 0 <= nxt_col < self.width
+                    and self.mask[nxt_row, nxt_col]
+                    and nxt not in holes
+                    and nxt not in visited
+                ):
+                    visited.add(nxt)
+                    queue.append(nxt)
+
+        return False
+
+    def _generate_holes(self) -> None:
+        """Generate random holes until a solvable map is produced."""
+        max_attempts = 1000
+
+        for _ in range(max_attempts):
+            holes: set[tuple[int, int]] = set()
+
+            for pos in self.pos2state:
+                if pos in (self.start_pos, self.goal_pos):
+                    continue
+                if self.random_state.rand() < self.hole_prob:
+                    holes.add(pos)
+
+            if self._is_reachable(holes):
+                self.holes = holes
+                return
+
+        raise RuntimeError("Unable to generate a solvable map")
+
+    def reset(self) -> int:
+        self.current_pos = self.start_pos
         return self.get_state()
 
-    def get_state(self) -> np.ndarray:
-        return self.board.copy()
-
-    def get_available_actions(self) -> list[TileMergingAction]:
-        valid_actions: list[TileMergingAction] = []
-
-        for action in TileMergingAction:
-            new_board, _ = self._move_board(self.board.copy(), action)
-            if not np.array_equal(new_board, self.board):
-                valid_actions.append(action)
-
-        return valid_actions
-
-    def step(self, action: TileMergingAction) -> tuple[np.ndarray, int, bool]:
+    def step(self, action: Action) -> tuple[int, float, bool]:
         """Apply the given action.
 
         Returns:
-            np.ndarray: The new board state.
-            int: The reward for the action.
-            bool: `True` if no moves left.
+            int: The new state.
+            float: The reward for the action.
+            bool: `True` if the game is over.
         """
-        old_board = self.board.copy()
-        self.board, reward = self._move_board(self.board, action)
+        dr, dc = self.DELTAS[action.value]
+        row, col = self.current_pos
+        new_pos = (row + dr, col + dc)
 
-        if not np.array_equal(old_board, self.board):
-            self._add_random_tile()
+        if new_pos in self.pos2state and new_pos not in self.holes:
+            self.current_pos = new_pos
 
-        self.score += reward
-        done = not self.get_available_actions()
-        return self.get_state(), reward, done
+        if self.current_pos == self.goal_pos:
+            return self.get_state(), self.GOAL_REWARD, True
+        if self.current_pos in self.holes:
+            return self.get_state(), self.HOLE_REWARD, True
 
-    def _add_random_tile(self) -> None:
-        """Add a 2 or 4 tile to a random empty cell."""
-        empty_cells = [
-            (i, j)
-            for i in range(self.size)
-            for j in range(self.size)
-            if self.board[i, j] == 0
-        ]
-        if not empty_cells:
-            return
+        return self.get_state(), self.STEP_REWARD, False
 
-        x, y = random.choice(empty_cells)
-        tile_value = 2 if random.random() < self.random_tile_2_prob else 4
-        self.board[x, y] = tile_value
+    def get_state(self) -> int:
+        return self.pos2state[self.current_pos]
 
-    def _move_board(
-        self,
-        board: np.ndarray,
-        action: TileMergingAction,
-    ) -> tuple[np.ndarray, int]:
-        """Return a new board and reward for the given action, without adding a tile."""
-        total_score = 0
-
-        match action:
-            case TileMergingAction.LEFT | TileMergingAction.RIGHT:
-                for i in range(self.size):
-                    row = list(board[i, :])
-                    if action == TileMergingAction.RIGHT:
-                        row = row[::-1]
-
-                    moved, score = self.__move_line_with_obstacle(row)
-                    total_score += score
-                    if action == TileMergingAction.RIGHT:
-                        moved = moved[::-1]
-                    board[i, :] = moved
-            case TileMergingAction.UP | TileMergingAction.DOWN:
-                for j in range(self.size):
-                    column = list(board[:, j])
-                    if action == TileMergingAction.DOWN:
-                        column = column[::-1]
-
-                    moved, score = self.__move_line_with_obstacle(column)
-                    total_score += score
-                    if action == TileMergingAction.DOWN:
-                        moved = moved[::-1]
-                    board[:, j] = moved
-
-        return board, total_score
-
-    def __move_line_with_obstacle(self, line: list[int]) -> tuple[list[int], int]:
-        """Process one row/column list with obstacles (-1) splitting into segments."""
-        total = 0
-
-        segments: list[list[int]] = []
-        idx_segs: list[list[int]] = []
-        curr_seg: list[int] = []
-        curr_idx: list[int] = []
-
-        for idx, v in enumerate(line):
-            if v == -1:
-                if curr_seg:
-                    segments.append(curr_seg)
-                    idx_segs.append(curr_idx)
-                    curr_seg = []
-                    curr_idx = []
-            else:
-                curr_seg.append(v)
-                curr_idx.append(idx)
-        if curr_seg:
-            segments.append(curr_seg)
-            idx_segs.append(curr_idx)
-
-        # Merge each segment
-        updated = {}
-        for seg, ids in zip(segments, idx_segs, strict=False):
-            merged, score = self.__merge_segment(seg)
-            total += score
-            for pos, val in zip(ids, merged, strict=False):
-                updated[pos] = val
-
-        # Rebuild line
-        new_line = []
-        for i, v in enumerate(line):
-            if v == -1:
-                new_line.append(-1)
-            else:
-                new_line.append(updated.get(i, 0))
-        return new_line, total
-
-    def __merge_segment(self, line: list[int]) -> tuple[list[int], int]:
-        """Merge one segment (no obstacles) by sliding and combining equal tiles."""
-        non_zero = [v for v in line if v > 0]
-        merged = []
-        score = 0
-
-        i = 0
-        while i < len(non_zero):
-            if i + 1 < len(non_zero) and non_zero[i] == non_zero[i + 1]:
-                new_val = non_zero[i] * 2
-                merged.append(new_val)
-                score += new_val
-                i += 2
-            else:
-                merged.append(non_zero[i])
-                i += 1
-
-        merged += [0] * (len(line) - len(merged))
-        return merged, score
+    def is_done(self) -> bool:
+        return self.current_pos == self.goal_pos or self.current_pos in self.holes
