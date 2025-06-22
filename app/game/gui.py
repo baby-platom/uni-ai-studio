@@ -6,6 +6,7 @@ from app.game.env import TileMergingEnv
 from app.game.vos import TileMergingAction
 
 
+# ruff: noqa: FBT003
 class TileMergingGUI:
     """GUI for a 2048-style tile merging game with obstacles."""
 
@@ -19,8 +20,7 @@ class TileMergingGUI:
         margin: int = 5,
         fps: int = 60,
     ) -> None:
-        """
-        Initialize pygame, window, environment, fonts, and colors.
+        """Initialize pygame, window, environment, fonts, and colors.
 
         Args:
             size: The size of the grid.
@@ -33,6 +33,8 @@ class TileMergingGUI:
         self.cell_size = cell_size
         self.margin = margin
         self.fps = fps
+
+        self.env: TileMergingEnv
 
         self.__init_pygame()
         self.__init_env()
@@ -69,7 +71,7 @@ class TileMergingGUI:
         """Define colors for tiles and obstacles."""
         self.color_map: dict[int, tuple[int, int, int]] = {
             0: (205, 193, 180),
-            -1: (119, 110, 101),  # obstacle
+            -1: (119, 110, 101),
             2: (238, 228, 218),
             4: (237, 224, 200),
             8: (242, 177, 121),

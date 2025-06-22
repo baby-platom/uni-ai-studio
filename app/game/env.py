@@ -6,8 +6,7 @@ from app.game.vos import TileMergingAction
 
 
 class TileMergingEnv:
-    """
-    Environment for a 2048-style tile merging game on an N x N grid.
+    """Environment for a 2048-style tile merging game on an N x N grid.
 
     The special feature of the game is a random cell filled with an obstacle.
     The obstacle is a cell that doesn't move and cannot be merged with other tiles.
@@ -24,6 +23,7 @@ class TileMergingEnv:
     def __init__(
         self,
         size: int = 4,
+        *,
         obstacle_enabled: bool = True,
         seed: int | None = None,
     ) -> None:
@@ -65,8 +65,7 @@ class TileMergingEnv:
         return valid_actions
 
     def step(self, action: TileMergingAction) -> tuple[np.ndarray, int, bool]:
-        """
-        Apply the given action.
+        """Apply the given action.
 
         Returns:
             np.ndarray: The new board state.
@@ -76,7 +75,6 @@ class TileMergingEnv:
         old_board = self.board.copy()
         self.board, reward = self._move_board(self.board, action)
 
-        # Only add a new tile if the board changed
         if not np.array_equal(old_board, self.board):
             self._add_random_tile()
 
@@ -106,11 +104,10 @@ class TileMergingEnv:
     ) -> tuple[np.ndarray, int]:
         """Return a new board and reward for the given action, without adding a tile."""
         total_score = 0
-        N = self.size
 
         match action:
             case TileMergingAction.LEFT | TileMergingAction.RIGHT:
-                for i in range(N):
+                for i in range(self.size):
                     row = list(board[i, :])
                     if action == TileMergingAction.RIGHT:
                         row = row[::-1]
@@ -121,12 +118,12 @@ class TileMergingEnv:
                         moved = moved[::-1]
                     board[i, :] = moved
             case TileMergingAction.UP | TileMergingAction.DOWN:
-                for j in range(N):
-                    col = list(board[:, j])
+                for j in range(self.size):
+                    column = list(board[:, j])
                     if action == TileMergingAction.DOWN:
-                        col = col[::-1]
+                        column = column[::-1]
 
-                    moved, score = self.__move_line_with_obstacle(col)
+                    moved, score = self.__move_line_with_obstacle(column)
                     total_score += score
                     if action == TileMergingAction.DOWN:
                         moved = moved[::-1]
@@ -159,10 +156,10 @@ class TileMergingEnv:
 
         # Merge each segment
         updated = {}
-        for seg, ids in zip(segments, idx_segs):
+        for seg, ids in zip(segments, idx_segs, strict=False):
             merged, score = self.__merge_segment(seg)
             total += score
-            for pos, val in zip(ids, merged):
+            for pos, val in zip(ids, merged, strict=False):
                 updated[pos] = val
 
         # Rebuild line
