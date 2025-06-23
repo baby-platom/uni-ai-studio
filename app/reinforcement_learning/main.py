@@ -23,12 +23,7 @@ def main() -> None:
     )
 
     for res in results:
-        print(
-            f"α={res['alpha']}, "
-            f"γ={res['gamma']}, "
-            f"ε={res['epsilon']}: "
-            f"converged at episode {res['convergence_episode']}"
-        )
+        print(f"{res['label']}: converged at episode {res['convergence_episode']}")
 
     plot_learning_curves(results, episodes)
     plot_success_rate_curves(results, episodes)
