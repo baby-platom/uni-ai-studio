@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 from app.game.env import LShapedGridWorldEnv
-from app.reinforcement_learning.agents import QLearningAgent
+from app.reinforcement_learning.agents import QLearningAgent, RandomAgent
 from app.reinforcement_learning.train import run_episode
 
 
@@ -30,6 +30,26 @@ def _evaluate_trained_agent(
 
     agent.epsilon = original_epsilon
     agent.update = original_update
+
+    return {
+        "mean_success_rate": float(np.mean(successes)),
+        "mean_episode_length": float(np.mean(lengths)),
+    }
+
+
+def _evaluate_random_agent(
+    env: LShapedGridWorldEnv,
+    episodes: int = 100,
+    seed: int | None = None,
+) -> dict[str, float]:
+    agent = RandomAgent(seed=seed)
+
+    successes = []
+    lengths = []
+    for _ in range(episodes):
+        _, steps, success = run_episode(env, agent)
+        successes.append(success)
+        lengths.append(steps)
 
     return {
         "mean_success_rate": float(np.mean(successes)),
@@ -78,18 +98,34 @@ def train_and_evaluate(
 
         results.append(
             {
-                "alpha": alpha,
-                "gamma": gamma,
-                "epsilon": epsilon,
+                "label": f"α={alpha}, γ={gamma}, ε={epsilon}",
                 "mean_success_rate": float(np.mean(success_rates)),
                 "mean_episode_length": float(np.mean(episode_lengths)),
             }
         )
+
+    rand_success_rates: list[float] = []
+    rand_episode_lengths: list[float] = []
+    for run_idx in range(runs):
+        seed = run_idx
+        env = LShapedGridWorldEnv(seed=seed)
+        metrics = _evaluate_random_agent(env, episodes=eval_episodes, seed=seed)
+        rand_success_rates.append(metrics["mean_success_rate"])
+        rand_episode_lengths.append(metrics["mean_episode_length"])
+
+    results.append(
+        {
+            "label": "Random baseline",
+            "mean_success_rate": float(np.mean(rand_success_rates)),
+            "mean_episode_length": float(np.mean(rand_episode_lengths)),
+        }
+    )
+
     return results
 
 
 def plot_evaluation(eval_results: list[dict[str, Any]]) -> None:
-    labels = [f"α={r['alpha']}, γ={r['gamma']}, ε={r['epsilon']}" for r in eval_results]
+    labels = [r["label"] for r in eval_results]
     success_rates = [r["mean_success_rate"] for r in eval_results]
     episode_lengths = [r["mean_episode_length"] for r in eval_results]
 
