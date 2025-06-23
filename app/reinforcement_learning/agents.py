@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 
 from app.game.vos import Action
@@ -62,11 +64,12 @@ class QLearningAgent:
 class RandomAgent:
     ACTION_SPACE = tuple(Action)
 
-    def __init__(self, seed: int | None = None):
+    def __init__(self, seed: int | None = None) -> None:
         self.rng = np.random.RandomState(seed)
 
+    # ruff: noqa: ARG002
     def choose_action(self, state: StateType) -> Action:
         return self.ACTION_SPACE[self.rng.randint(0, len(self.ACTION_SPACE))]
 
-    def update(self, *_, **__) -> None:
+    def update(self, *_: tuple[Any, ...], **__: dict[str, Any]) -> None:
         pass

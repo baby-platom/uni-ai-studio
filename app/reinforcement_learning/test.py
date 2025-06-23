@@ -72,7 +72,7 @@ def _train_agent(
     return agent
 
 
-def train_and_evaluate(
+def train_and_test(
     alphas: list[float],
     gammas: list[float],
     epsilons: list[float],
@@ -124,7 +124,7 @@ def train_and_evaluate(
     return results
 
 
-def plot_evaluation(eval_results: list[dict[str, Any]]) -> None:
+def plot_test_results(eval_results: list[dict[str, Any]]) -> None:
     labels = [r["label"] for r in eval_results]
     success_rates = [r["mean_success_rate"] for r in eval_results]
     episode_lengths = [r["mean_episode_length"] for r in eval_results]

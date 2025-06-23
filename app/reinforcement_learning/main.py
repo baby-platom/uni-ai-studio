@@ -1,4 +1,4 @@
-from app.reinforcement_learning.evaluate import plot_evaluation, train_and_evaluate
+from app.reinforcement_learning.test import plot_test_results, train_and_test
 from app.reinforcement_learning.train import (
     evaluate_parameter_grid,
     plot_learning_curves,
@@ -7,8 +7,8 @@ from app.reinforcement_learning.train import (
 
 
 def main() -> None:
-    episodes = 5000
-    runs = 2
+    episodes = 2000
+    runs = 10
 
     alphas = [0.1, 0.5]
     gammas = [0.9, 0.99]
@@ -28,14 +28,14 @@ def main() -> None:
     plot_learning_curves(results, episodes)
     plot_success_rate_curves(results, episodes)
 
-    eval_results = train_and_evaluate(
+    eval_results = train_and_test(
         alphas,
         gammas,
         epsilons,
         train_episodes=episodes,
         runs=runs,
     )
-    plot_evaluation(eval_results)
+    plot_test_results(eval_results)
 
 
 if __name__ == "__main__":
