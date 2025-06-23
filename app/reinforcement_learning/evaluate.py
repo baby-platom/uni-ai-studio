@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 from app.game.env import LShapedGridWorldEnv
-from app.reinforcement_learning.agent import QLearningAgent
+from app.reinforcement_learning.agents import QLearningAgent
 from app.reinforcement_learning.train import run_episode
 
 

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from app.game.env import LShapedGridWorldEnv
-from app.reinforcement_learning.agent import QLearningAgent
+from app.reinforcement_learning.agents import QLearningAgent
 
 
 def run_episode(

@@ -57,3 +57,16 @@ class QLearningAgent:
             target = reward + self.gamma * np.max(next_q_vals)
 
         q_vals[action.value] = current + self.alpha * (target - current)
+
+
+class RandomAgent:
+    ACTION_SPACE = tuple(Action)
+
+    def __init__(self, seed: int | None = None):
+        self.rng = np.random.RandomState(seed)
+
+    def choose_action(self, state: StateType) -> Action:
+        return self.ACTION_SPACE[self.rng.randint(0, len(self.ACTION_SPACE))]
+
+    def update(self, *_, **__) -> None:
+        pass
