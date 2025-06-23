@@ -26,6 +26,7 @@ class LShapedGridWorldGUI:
     AGENT_COLOR: tuple[int, int, int] = (0, 0, 255)
     HOLE_COLOR: tuple[int, int, int] = (50, 50, 50)
     GOAL_COLOR: tuple[int, int, int] = (0, 200, 0)
+    COIN_COLOR: tuple[int, int, int] = (255, 215, 0)
     TEXT_COLOR: tuple[int, int, int] = (255, 255, 255)
 
     KEY_ACTION_MAP: Mapping[int, Action] = MappingProxyType(
@@ -127,6 +128,14 @@ class LShapedGridWorldGUI:
                     color = self.GRID_COLOR
 
                 pygame.draw.rect(self.screen, color, rect)
+
+                if pos in self.env.coins:
+                    center = (
+                        x + self.CELL_SIZE // 2,
+                        y + self.CELL_SIZE // 2,
+                    )
+                    radius = self.CELL_SIZE // 4
+                    pygame.draw.circle(self.screen, self.COIN_COLOR, center, radius)
 
         agent_row, agent_col = self.env.current_pos
         x = self.MARGIN + agent_col * (self.CELL_SIZE + self.MARGIN)

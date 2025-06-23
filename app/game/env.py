@@ -8,15 +8,10 @@ from app.game.vos import Action
 
 
 class LShapedGridWorldEnv:
-    """Custom L-shaped grid world environment with random holes.
-
-    Rewards:
-      - Step: -0.1
-      - Goal: +1
-      - Hole: -1
-    """
+    """L-shaped grid world environment with random holes and collectible coins."""
 
     GOAL_REWARD = 2.0
+    COIN_REWARD = 0.1
     HOLE_REWARD = -1.0
     STEP_REWARD = -0.05
 
@@ -41,6 +36,7 @@ class LShapedGridWorldEnv:
     state2pos: dict[int, tuple[int, int]]
 
     holes: set[tuple[int, int]]
+    coins: set[tuple[int, int]]
     start_pos: tuple[int, int]
     goal_pos: tuple[int, int]
     current_pos: tuple[int, int]
@@ -52,6 +48,7 @@ class LShapedGridWorldEnv:
         arm_width: int = 4,
         arm_height: int = 4,
         hole_prob: float = 0.2,
+        coin_prob: float = 0.1,
         seed: int | None = None,
     ) -> None:
         self.height = height
@@ -59,12 +56,14 @@ class LShapedGridWorldEnv:
         self.arm_width = arm_width
         self.arm_height = arm_height
         self.hole_prob = hole_prob
+        self.coin_prob = coin_prob
 
         self.random_state = np.random.RandomState(seed)
 
         self._build_mask()
         self._init_mappings()
         self._generate_holes()
+        self._generate_coins()
 
         self.reset()
 
@@ -134,6 +133,17 @@ class LShapedGridWorldEnv:
 
         raise RuntimeError("Unable to generate a solvable map")
 
+    def _generate_coins(self) -> None:
+        coins: set[tuple[int, int]] = set()
+
+        for pos in self.pos2state:
+            if pos in (self.start_pos, self.goal_pos) or pos in self.holes:
+                continue
+            if self.random_state.rand() < self.coin_prob:
+                coins.add(pos)
+
+        self.coins = coins
+
     def reset(self) -> int:
         self.current_pos = self.start_pos
         return self.get_state()
@@ -163,5 +173,9 @@ class LShapedGridWorldEnv:
             return self.get_state(), self.GOAL_REWARD, True
         if self.current_pos in self.holes:
             return self.get_state(), self.HOLE_REWARD, True
+
+        if self.current_pos in self.coins:
+            self.coins.remove(self.current_pos)
+            return self.get_state(), self.COIN_REWARD, False
 
         return self.get_state(), self.STEP_REWARD, False
