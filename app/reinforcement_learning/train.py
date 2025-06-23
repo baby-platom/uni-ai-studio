@@ -70,10 +70,13 @@ def evaluate_parameter_grid(
     epsilons: list[float],
     runs: int,
     episodes: int,
+    window_fraction: float = 0.1,
+    success_threshold: float = 0.8,
 ) -> list[dict[str, Any]]:
     """Evaluate combinations of hyperparameters."""
     results = []
 
+    window = max(1, int(episodes * window_fraction))
     param_grid = list(itertools.product(alphas, gammas, epsilons))
 
     for alpha, gamma, epsilon in param_grid:
@@ -98,14 +101,16 @@ def evaluate_parameter_grid(
         mean_rewards = reward_matrix.mean(axis=0)
         mean_success = success_matrix.mean(axis=0)
 
-        window = min(100, episodes // 10)
         mov_avg_rewards = (
             pd.Series(mean_rewards).rolling(window, min_periods=1).mean().values
         )
+        mov_avg_success = (
+            pd.Series(mean_success).rolling(window, min_periods=1).mean().values
+        )
 
-        threshold = 0.8
         converged_at = next(
-            (i + 1 for i, v in enumerate(mov_avg_rewards) if v >= threshold), None
+            (i + 1 for i, v in enumerate(mov_avg_success) if v >= success_threshold),
+            None,
         )
 
         results.append(
@@ -116,6 +121,7 @@ def evaluate_parameter_grid(
                 "mean_rewards": mean_rewards,
                 "mean_success": mean_success,
                 "mov_avg_rewards": mov_avg_rewards,
+                "mov_avg_success": mov_avg_success,
                 "convergence_episode": converged_at,
             }
         )
@@ -124,17 +130,39 @@ def evaluate_parameter_grid(
 
 
 def plot_learning_curves(results: list[dict[str, Any]], episodes: int) -> None:
-    """Plot the smoothed reward curves for each hyperparameter setting."""
+    """Plot the smoothed reward curves."""
     plt.figure(figsize=(10, 6))
 
     for res in results:
         label = f"α={res['alpha']}, γ={res['gamma']}, ε={res['epsilon']}"
-        plt.plot(range(1, episodes + 1), res["mov_avg_rewards"], label=label)
+        x = np.arange(1, episodes + 1)
+        y = res["mov_avg_rewards"]
+        plt.plot(x, y, label=label)
 
     plt.xlabel("Episode")
     plt.ylabel("Moving Avg Reward")
 
     plt.title("Learning Curves (Moving Avg Reward)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_success_rate_curves(results: list[dict[str, Any]], episodes: int) -> None:
+    """Plot the smoothed success rate curves."""
+    plt.figure(figsize=(10, 6))
+
+    for res in results:
+        label = f"α={res['alpha']}, γ={res['gamma']}, ε={res['epsilon']}"
+        x = np.arange(1, episodes + 1)
+        y = res["mov_avg_success"]
+        plt.plot(x, y, label=label)
+
+    plt.xlabel("Episode")
+    plt.ylabel("Moving Avg Success Rate")
+
+    plt.title("Success Rate Curves")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
@@ -166,6 +194,7 @@ def main() -> None:
         )
 
     plot_learning_curves(results, episodes)
+    plot_success_rate_curves(results, episodes)
 
 
 if __name__ == "__main__":
