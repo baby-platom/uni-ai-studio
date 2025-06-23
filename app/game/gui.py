@@ -4,18 +4,18 @@ from types import MappingProxyType
 
 import pygame
 
-from app.game.env import FrozenLLakeEnv
+from app.game.env import LShapedGridWorldEnv
 from app.game.vos import Action
 
 
-class FrozenLLakeGUI:
-    """Pygame GUI for the L-shaped Frozen Lake environment."""
+class LShapedGridWorldGUI:
+    """Pygame GUI for the L-shaped grid world environment."""
 
     CELL_SIZE: int = 40
     MARGIN: int = 2
     FONT_SIZE: int = 24
     FPS: int = 10
-    WINDOW_TITLE: str = "L-Shaped Frozen Lake"
+    WINDOW_TITLE: str = "L-Shaped Grid World"
 
     QUIT_KEY: int = pygame.K_q
     RESTART_KEY: int = pygame.K_r
@@ -37,8 +37,8 @@ class FrozenLLakeGUI:
         }
     )
 
-    def __init__(self, env: FrozenLLakeEnv) -> None:
-        self.env: FrozenLLakeEnv = env
+    def __init__(self, env: LShapedGridWorldEnv) -> None:
+        self.env: LShapedGridWorldEnv = env
 
         self.score: float = 0.0
         self.game_over: bool = False

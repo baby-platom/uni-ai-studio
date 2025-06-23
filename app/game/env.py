@@ -7,8 +7,8 @@ import numpy as np
 from app.game.vos import Action
 
 
-class FrozenLLakeEnv:
-    """Custom L-shaped Frozen Lake environment with random holes.
+class LShapedGridWorldEnv:
+    """Custom L-shaped grid world environment with random holes.
 
     Rewards:
       - Step: -0.1
