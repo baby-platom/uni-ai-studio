@@ -5,11 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from app.game.env import FrozenLLakeEnv
+from app.game.env import LShapedGridWorldEnv
 from app.reinforcement_learning.agent import QLearningAgent
 
 
-def run_episode(env: FrozenLLakeEnv, agent: QLearningAgent) -> tuple[float, int, int]:
+def run_episode(
+    env: LShapedGridWorldEnv, agent: QLearningAgent
+) -> tuple[float, int, int]:
     state = env.reset()
     total_reward = 0.0
     steps = 0
@@ -39,7 +41,7 @@ def run_training(
     epsilon: float,
 ) -> dict[str, np.ndarray]:
     """Train a single Q-learning agent for a fixed number of episodes."""
-    env = FrozenLLakeEnv(seed=seed)
+    env = LShapedGridWorldEnv(seed=seed)
     agent = QLearningAgent(
         alpha=alpha,
         gamma=gamma,
@@ -167,35 +169,3 @@ def plot_success_rate_curves(results: list[dict[str, Any]], episodes: int) -> No
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-
-
-def main() -> None:
-    episodes = 1000
-    runs = 10
-
-    alphas = [0.1, 0.5]
-    gammas = [0.9, 0.99]
-    epsilons = [0.05, 0.1, 0.2]
-
-    results = evaluate_parameter_grid(
-        alphas,
-        gammas,
-        epsilons,
-        runs,
-        episodes,
-    )
-
-    for res in results:
-        print(
-            f"α={res['alpha']}, "
-            f"γ={res['gamma']}, "
-            f"ε={res['epsilon']}: "
-            f"converged at episode {res['convergence_episode']}"
-        )
-
-    plot_learning_curves(results, episodes)
-    plot_success_rate_curves(results, episodes)
-
-
-if __name__ == "__main__":
-    main()
