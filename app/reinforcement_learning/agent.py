@@ -28,7 +28,9 @@ class QLearningAgent:
 
     def choose_action(self, state: int) -> Action:
         if self.rng.rand() < self.epsilon:
-            return self.rng.choice(self.ACTION_SPACE)  # Explore
+            return self.ACTION_SPACE[
+                self.rng.randint(0, len(self.ACTION_SPACE))
+            ]  # Explore
 
         q_vals: np.ndarray = self._get_q_values(state)
         best_idx: int = int(np.argmax(q_vals))

@@ -1,4 +1,6 @@
 from collections import deque
+from collections.abc import Mapping
+from types import MappingProxyType
 
 import numpy as np
 
@@ -14,11 +16,18 @@ class FrozenLLakeEnv:
       - Hole: -1
     """
 
-    GOAL_REWARD = 1.0
+    GOAL_REWARD = 2.0
     HOLE_REWARD = -1.0
-    STEP_REWARD = -0.1
+    STEP_REWARD = -0.05
 
-    DELTAS: tuple[tuple[int, int]] = ((-1, 0), (0, 1), (1, 0), (0, -1))
+    DELTAS: Mapping[Action, tuple[int, int]] = MappingProxyType(
+        {
+            Action.UP: (-1, 0),
+            Action.RIGHT: (0, 1),
+            Action.DOWN: (1, 0),
+            Action.LEFT: (0, -1),
+        }
+    )
 
     height: int
     width: int
@@ -90,7 +99,7 @@ class FrozenLLakeEnv:
             if (row, col) == self.goal_pos:
                 return True
 
-            for dr, dc in self.DELTAS:
+            for dr, dc in self.DELTAS.values():
                 nxt_row, nxt_col = row + dr, col + dc
                 nxt = (nxt_row, nxt_col)
 
@@ -129,6 +138,12 @@ class FrozenLLakeEnv:
         self.current_pos = self.start_pos
         return self.get_state()
 
+    def get_state(self) -> int:
+        return self.pos2state[self.current_pos]
+
+    def is_done(self) -> bool:
+        return self.current_pos == self.goal_pos or self.current_pos in self.holes
+
     def step(self, action: Action) -> tuple[int, float, bool]:
         """Apply the given action.
 
@@ -137,7 +152,7 @@ class FrozenLLakeEnv:
             float: The reward for the action.
             bool: `True` if the game is over.
         """
-        dr, dc = self.DELTAS[action.value]
+        dr, dc = self.DELTAS[action]
         row, col = self.current_pos
         new_pos = (row + dr, col + dc)
 
@@ -150,9 +165,3 @@ class FrozenLLakeEnv:
             return self.get_state(), self.HOLE_REWARD, True
 
         return self.get_state(), self.STEP_REWARD, False
-
-    def get_state(self) -> int:
-        return self.pos2state[self.current_pos]
-
-    def is_done(self) -> bool:
-        return self.current_pos == self.goal_pos or self.current_pos in self.holes
