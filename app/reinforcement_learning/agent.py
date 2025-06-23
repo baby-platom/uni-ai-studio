@@ -2,6 +2,8 @@ import numpy as np
 
 from app.game.vos import Action
 
+StateType = tuple[int, tuple[tuple[int, int], ...]]
+
 
 class QLearningAgent:
     ACTION_SPACE = tuple(Action)
@@ -18,15 +20,15 @@ class QLearningAgent:
         self.epsilon: float = epsilon
         self.rng = np.random.RandomState(seed)
 
-        self.q_table: dict[int, np.ndarray] = {}
+        self.q_table: dict[StateType, np.ndarray] = {}
 
-    def _get_q_values(self, state: int) -> np.ndarray:
+    def _get_q_values(self, state: StateType) -> np.ndarray:
         """Return Q-values for the given state, initializing to zero if unseen."""
         if state not in self.q_table:
             self.q_table[state] = np.zeros(len(self.ACTION_SPACE), dtype=float)
         return self.q_table[state]
 
-    def choose_action(self, state: int) -> Action:
+    def choose_action(self, state: StateType) -> Action:
         if self.rng.rand() < self.epsilon:
             return self.ACTION_SPACE[
                 self.rng.randint(0, len(self.ACTION_SPACE))
@@ -39,10 +41,10 @@ class QLearningAgent:
     # ruff: noqa: FBT001
     def update(
         self,
-        state: int,
+        state: StateType,
         action: Action,
         reward: float,
-        next_state: int,
+        next_state: StateType,
         done: bool,
     ) -> None:
         """Perform the Q-learning update for a single transition."""

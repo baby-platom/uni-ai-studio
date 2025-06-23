@@ -11,7 +11,7 @@ class LShapedGridWorldEnv:
     """L-shaped grid world environment with random holes and collectible coins."""
 
     GOAL_REWARD = 2.0
-    COIN_REWARD = 0.1
+    COIN_REWARD = 0.5
     HOLE_REWARD = -1.0
     STEP_REWARD = -0.05
 
@@ -43,10 +43,10 @@ class LShapedGridWorldEnv:
 
     def __init__(
         self,
-        height: int = 10,
-        width: int = 10,
-        arm_width: int = 4,
-        arm_height: int = 4,
+        height: int = 8,
+        width: int = 8,
+        arm_width: int = 3,
+        arm_height: int = 3,
         hole_prob: float = 0.2,
         coin_prob: float = 0.1,
         seed: int | None = None,
@@ -63,7 +63,9 @@ class LShapedGridWorldEnv:
         self._build_mask()
         self._init_mappings()
         self._generate_holes()
+
         self._generate_coins()
+        self._initial_coins = set(self.coins)
 
         self.reset()
 
@@ -144,17 +146,22 @@ class LShapedGridWorldEnv:
 
         self.coins = coins
 
-    def reset(self) -> int:
+    def reset(self) -> tuple[int, tuple[tuple[int, int], ...]]:
         self.current_pos = self.start_pos
+        self.coins = set(self._initial_coins)
         return self.get_state()
 
-    def get_state(self) -> int:
-        return self.pos2state[self.current_pos]
+    def get_state(self) -> tuple[int, tuple[tuple[int, int], ...]]:
+        cell = self.pos2state[self.current_pos]
+        coins_tuple = tuple(sorted(self.coins))
+        return cell, coins_tuple
 
     def is_done(self) -> bool:
         return self.current_pos == self.goal_pos or self.current_pos in self.holes
 
-    def step(self, action: Action) -> tuple[int, float, bool]:
+    def step(
+        self, action: Action
+    ) -> tuple[tuple[int, tuple[tuple[int, int], ...]], float, bool]:
         """Apply the given action.
 
         Returns:
