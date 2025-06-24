@@ -18,8 +18,8 @@ The game's environment is an L-shaped 8x8 map with two 3x3 arms.
 
 #### Rewards:
 - `+2` for reaching the goal (win).
-- `+0.5` for collecting a coin.
-- `-1.0` for getting into a hole (game over).
+- `+0.25` for collecting a coin.
+- `-2.0` for getting into a hole (game over).
 - `-0.05` for a regular step.
 
 ### Reinforcement Learning

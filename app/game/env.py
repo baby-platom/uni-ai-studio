@@ -11,8 +11,8 @@ class LShapedGridWorldEnv:
     """L-shaped grid world environment with random holes and collectible coins."""
 
     GOAL_REWARD = 2.0
-    COIN_REWARD = 0.5
-    HOLE_REWARD = -1.0
+    COIN_REWARD = 0.25
+    HOLE_REWARD = -2.0
     STEP_REWARD = -0.05
 
     DELTAS: Mapping[Action, tuple[int, int]] = MappingProxyType(
