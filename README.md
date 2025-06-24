@@ -53,13 +53,11 @@ Optionally:
 Both `game` and `reinforcement_learning` packages contain the `main.py` files, which are the entrypoints. To use any of the packages, just run the files
 
 ### Play the Game
-Run the script:
 ```sh
 python -m app.game.main
 ```
 
 ### Reinforcement Learning
-Run the script:
 ```sh
 python -m app.reinforcement_learning.main
 ```

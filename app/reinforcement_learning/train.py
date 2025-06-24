@@ -95,12 +95,11 @@ def evaluate_parameter_grid(
     epsilons: list[float],
     runs: int,
     episodes: int,
-    window_fraction: float = 0.1,
+    window_size: int,
     success_threshold: float = 0.8,
 ) -> list[dict[str, Any]]:
     """Evaluate combinations of hyperparameters and a random baseline."""
     results = []
-    window = max(1, int(episodes * window_fraction))
     param_grid = list(itertools.product(alphas, gammas, epsilons))
 
     for alpha, gamma, epsilon in param_grid:
@@ -119,10 +118,10 @@ def evaluate_parameter_grid(
         mean_success = success_matrix.mean(axis=0)
 
         mov_avg_rewards = (
-            pd.Series(mean_rewards).rolling(window, min_periods=1).mean().values
+            pd.Series(mean_rewards).rolling(window_size, min_periods=1).mean().values
         )
         mov_avg_success = (
-            pd.Series(mean_success).rolling(window, min_periods=1).mean().values
+            pd.Series(mean_success).rolling(window_size, min_periods=1).mean().values
         )
 
         converged_at = next(
@@ -145,7 +144,7 @@ def evaluate_parameter_grid(
         _evaluate_random_baseline(
             episodes,
             runs,
-            window,
+            window_size,
             success_threshold,
         )
     )
@@ -156,7 +155,7 @@ def evaluate_parameter_grid(
 def _evaluate_random_baseline(
     episodes: int,
     runs: int,
-    window: int,
+    window_size: int,
     success_threshold: float,
 ) -> dict[str, Any]:
     reward_matrix = []
@@ -170,12 +169,14 @@ def _evaluate_random_baseline(
     success_matrix = np.vstack(success_matrix)
     mean_rewards = reward_matrix.mean(axis=0)
     mean_success = success_matrix.mean(axis=0)
+
     mov_avg_rewards = (
-        pd.Series(mean_rewards).rolling(window, min_periods=1).mean().values
+        pd.Series(mean_rewards).rolling(window_size, min_periods=1).mean().values
     )
     mov_avg_success = (
-        pd.Series(mean_success).rolling(window, min_periods=1).mean().values
+        pd.Series(mean_success).rolling(window_size, min_periods=1).mean().values
     )
+
     converged_at = next(
         (i + 1 for i, v in enumerate(mov_avg_success) if v >= success_threshold),
         None,
@@ -191,7 +192,11 @@ def _evaluate_random_baseline(
     }
 
 
-def plot_learning_curves(results: list[dict[str, Any]], episodes: int) -> None:
+def plot_learning_curves(
+    results: list[dict[str, Any]],
+    episodes: int,
+    window_size: int,
+) -> None:
     plt.figure(figsize=(10, 6))
 
     for res in results:
@@ -202,14 +207,18 @@ def plot_learning_curves(results: list[dict[str, Any]], episodes: int) -> None:
     plt.xlabel("Episode")
     plt.ylabel("Moving Avg Reward")
 
-    plt.title("Learning Curves (Moving Avg Reward)")
+    plt.title(f"Learning Curves (window size = {window_size})")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.show()
 
 
-def plot_success_rate_curves(results: list[dict[str, Any]], episodes: int) -> None:
+def plot_success_rate_curves(
+    results: list[dict[str, Any]],
+    episodes: int,
+    window_size: int,
+) -> None:
     plt.figure(figsize=(10, 6))
 
     for res in results:
@@ -220,7 +229,7 @@ def plot_success_rate_curves(results: list[dict[str, Any]], episodes: int) -> No
     plt.xlabel("Episode")
     plt.ylabel("Moving Avg Success Rate")
 
-    plt.title("Success Rate Curves")
+    plt.title(f"Success Rate Curves (window size = {window_size})")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
