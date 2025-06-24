@@ -1,6 +1,11 @@
 # uni-ai-studio
 The repository contains the code for Reinforcement Learning for a Game.
 
+## Table of Contents
+1. [Overview](#overview)
+2. [Installation](#installation)
+3. [Usage](#usage)
+
 ## Overview
 In the root folder `app` are two major packages: `game` and `reinforcement_learning`.
 1. `game` - the implementation of the environment of a custom GreedyMap game and its GUI.
@@ -23,3 +28,38 @@ The Q-learning algorithm was selected, where a state is represented as a tuple w
 2. Calculating metrics like convergence rate, moving average reward, and moving average success rate.
 3. Testing the trained policies, by using mean success rate and mean episode length.
 4. All the metrics are compared with a base line using the random agent. 
+
+## Installation
+The required Python version is `3.12.7`
+
+1. Clone the repo
+```sh
+git clone https://github.com/baby-platom/uni-ai-studio.git
+```
+
+2. Create virtual environment and install the dependencies
+```sh
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Optionally: 
+- Use [uv](https://docs.astral.sh/uv/) for dependencies management
+- Use [ruff](https://docs.astral.sh/ruff/) as a linter and code formatter
+
+## Usage
+Both `game` and `reinforcement_learning` packages contain the `main.py` files, which are the entrypoints. To use any of the packages, just run the files
+
+### Play the Game
+Run the script:
+```sh
+python -m app.game.main
+```
+
+### Reinforcement Learning
+Run the script:
+```sh
+python -m app.reinforcement_learning.main
+```
