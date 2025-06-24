@@ -132,8 +132,6 @@ def evaluate_parameter_grid(
         results.append(
             {
                 "label": f"α={alpha}, γ={gamma}, ε={epsilon}",
-                "mean_rewards": mean_rewards,
-                "mean_success": mean_success,
                 "mov_avg_rewards": mov_avg_rewards,
                 "mov_avg_success": mov_avg_success,
                 "convergence_episode": converged_at,
@@ -184,8 +182,6 @@ def _evaluate_random_baseline(
 
     return {
         "label": "Random baseline",
-        "mean_rewards": mean_rewards,
-        "mean_success": mean_success,
         "mov_avg_rewards": mov_avg_rewards,
         "mov_avg_success": mov_avg_success,
         "convergence_episode": converged_at,
