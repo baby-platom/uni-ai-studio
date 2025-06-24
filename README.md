@@ -58,6 +58,7 @@ python -m app.game.main
 ```
 
 ### Reinforcement Learning
+Note that it may take some time to get the results of running the script. 
 ```sh
 python -m app.reinforcement_learning.main
 ```
